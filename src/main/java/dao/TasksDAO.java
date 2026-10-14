@@ -10,9 +10,20 @@ import java.util.List;
 import model.Task;
 
 public class TasksDAO {
-	private final String JDBC_URL = "jdbc:h2:tcp://localhost/~/dokoTsubu";
-	private final String DB_USER = "sa";
-	private final String DB_PASS = "";
+	private final String JDBC_URL;
+	private final String DB_USER;
+	private final String DB_PASS;
+
+    public TasksDAO() {
+        this("jdbc:h2:tcp://localhost/~/dokoTsubu", "sa", "");
+    }
+
+    // 接続先を指定できるようにし、テストは既存DBから分離する。
+    TasksDAO(String url, String user, String password) {
+        JDBC_URL = url;
+        DB_USER = user;
+        DB_PASS = password;
+    }
 	
 	public List<Task> findByGoalId(int goalId) {
 		List<Task> taskList = new ArrayList<>();
@@ -80,7 +91,7 @@ public class TasksDAO {
 		return true;
 	}
 	
-	public boolean updateCompleted(int taskId) {
+	public boolean updateCompleted(int taskId, int goalId) {
 		try {
 			Class.forName("org.h2.Driver");
 		} catch (ClassNotFoundException e) {
@@ -92,10 +103,11 @@ public class TasksDAO {
 			String sql = """
 					UPDATE TASKS 
 					SET IS_COMPLETED = TRUE
-					WHERE ID = ?
+					WHERE ID = ? AND GOAL_ID = ?
 					""";
 			PreparedStatement pStmt = conn.prepareStatement(sql);
 			pStmt.setInt(1, taskId);
+            pStmt.setInt(2, goalId);
 			
 			int result = pStmt.executeUpdate();
 			
@@ -110,7 +122,7 @@ public class TasksDAO {
 			return true;
 	}
 	
-	public boolean delete(int taskId) {
+	public boolean delete(int taskId, int goalId) {
 		try {
 			Class.forName("org.h2.Driver");
 		} catch (ClassNotFoundException e) {
@@ -118,10 +130,11 @@ public class TasksDAO {
 		}
 		
 		try (Connection conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASS)) {
-			String sql = "DELETE FROM TASKS WHERE ID = ?";
+			String sql = "DELETE FROM TASKS WHERE ID = ? AND GOAL_ID = ?";
 			
 			PreparedStatement pStmt = conn.prepareStatement(sql);
 			pStmt.setInt(1, taskId);
+            pStmt.setInt(2, goalId);
 			
 			int result = pStmt.executeUpdate();
 			if (result != 1) {
@@ -134,7 +147,7 @@ public class TasksDAO {
 		return true;
 	}
 	
-	public boolean updateTitle(int taskId, String title) {
+	public boolean updateTitle(int taskId, int goalId, String title) {
 		try {
 			Class.forName("org.h2.Driver");
 		} catch (ClassNotFoundException e) {
@@ -143,13 +156,14 @@ public class TasksDAO {
 		
 		try (Connection conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASS)) {
 			String sql = """
-					UPDATE TASKS SET TITLE = ? WHERE ID = ?
+					UPDATE TASKS SET TITLE = ? WHERE ID = ? AND GOAL_ID = ?
 					""";
 			
 			PreparedStatement pStmt = conn.prepareStatement(sql);
 			
 			pStmt.setString(1, title);
 			pStmt.setInt(2, taskId);
+            pStmt.setInt(3, goalId);
 			
 			int result = pStmt.executeUpdate();
 			

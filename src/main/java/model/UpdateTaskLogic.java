@@ -3,8 +3,7 @@ package model;
 import dao.TasksDAO;
 
 public class UpdateTaskLogic {
-	public void execute(int taskId) {
-		TasksDAO dao = new TasksDAO();
-		dao.updateCompleted(taskId);
-	}
+    public boolean execute(int taskId, int goalId) {
+        return new TasksDAO().updateCompleted(taskId, goalId);
+    }
 }

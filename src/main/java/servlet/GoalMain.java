@@ -16,6 +16,7 @@ import model.GetProgressLogic;
 import model.Goal;
 import model.PostGoalLogic;
 import model.User;
+import model.TitleInput;
 
 @WebServlet("/GoalMain")
 public class GoalMain extends HttpServlet {
@@ -68,20 +69,23 @@ public class GoalMain extends HttpServlet {
 		}
 		
 		// 入力された目標名を取得
-		String title = request.getParameter("title");
+		String title = TitleInput.normalize(request.getParameter("title"));
+        String titleError = TitleInput.error(title, "目標");
 		
 		// 入力チェック
-		if (title != null && title.length() != 0) {
+		if (titleError == null) {
 		
 			// Goalインスタンスを作成			
 			Goal goal = new Goal(loginUser.getName(), title);
 			// 目標をDBへ登録
 			PostGoalLogic postGoalLogic = new PostGoalLogic();
-			postGoalLogic.execute(goal);
+			if (!postGoalLogic.execute(goal)) {
+                request.setAttribute("errorMsg", "目標を登録できませんでした");
+            }
 			
 		} else {
 			// 未入力の場合
-			request.setAttribute("errorMsg", "目標が入力されていません");
+			request.setAttribute("errorMsg", titleError);
 		}
 		// ログインユーザーの目標だけ再取得
 		GetGoalListLogic getGoalListLogic = new GetGoalListLogic();

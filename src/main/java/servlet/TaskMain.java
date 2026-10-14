@@ -19,6 +19,7 @@ import model.PostTaskLogic;
 import model.Task;
 import model.UpdateTaskLogic;
 import model.User;
+import model.TitleInput;
 
 @WebServlet("/TaskMain")
 public class TaskMain extends HttpServlet {
@@ -115,72 +116,36 @@ public class TaskMain extends HttpServlet {
 			response.sendRedirect("GoalMain");
 			return;
 		}
-		// 何の処理科取得
-		String action = request.getParameter("action");
-		
-		// タスク追加
-		if ("add".equals(action)) {
-			
-			String title = request.getParameter("title");
-			
-			if (title != null && title.length() != 0) {
-				Task task = new Task(goalId, title);
-				
-				PostTaskLogic postTaskLogic = new PostTaskLogic();
-				postTaskLogic.execute(task);
-				
-			} else {
-				
-				request.setAttribute("errorMsg", "タスクが入力されていません");
-	
-			}
-		// タスク完了
-		} else if ("complete".equals(action)) {
-			String taskIdParam = request.getParameter("taskId");
-			
-			if (taskIdParam != null) {
-				try {
-					int taskId = Integer.parseInt(taskIdParam);
-					
-					UpdateTaskLogic updateTaskLogic = new UpdateTaskLogic();
-					updateTaskLogic.execute(taskId);
-				} catch (NumberFormatException e) {
-					request.setAttribute("errorMsg", "たすくIDが不正です");
-				}
-			}
-		// タスク削除
-		} else if ("delete".equals(action)) {
-			String taskIdParam = request.getParameter("taskId");
-			
-			if (taskIdParam != null) {
-				try {
-					int taskId = Integer.parseInt(taskIdParam);
-					
-					DeleteTaskLogic deleteTaskLogic = new DeleteTaskLogic();
-					deleteTaskLogic.execute(taskId);
-				} catch (NumberFormatException e) {
-					request.setAttribute("errorMsg", "タスクIDが不正です");
-				}
-			}
-		// タスク名編集			
-		} else if ("edit".equals(action)) {
-			String taskIdParam = request.getParameter("taskId");
-			String title = request.getParameter("title");
-			
-			if (title != null && title.length() != 0 && taskIdParam != null) {
-				
-				try {
-					int taskId = Integer.parseInt(taskIdParam);
-					
-					EditTaskLogic editTaskLogic = new EditTaskLogic();
-					editTaskLogic.execute(taskId, title);
-				} catch (NumberFormatException e) {
-					request.setAttribute("errorMsg", "タスクIDが不正です");
-				}
-			} else {
-				request.setAttribute("errorMsg", "タスク名が入力されていません");
-			}
-		}
+        String action = request.getParameter("action");
+        String error = null;
+        if ("add".equals(action)) {
+            String title = TitleInput.normalize(request.getParameter("title"));
+            error = TitleInput.error(title, "タスク名");
+            if (error == null && !new PostTaskLogic().execute(new Task(goalId, title))) {
+                error = "タスクを登録できませんでした";
+            }
+        } else if ("complete".equals(action) || "edit".equals(action) || "delete".equals(action)) {
+            try {
+                int taskId = Integer.parseInt(request.getParameter("taskId"));
+                if (taskId <= 0) throw new NumberFormatException();
+                boolean changed = false;
+                if ("edit".equals(action)) {
+                    String title = TitleInput.normalize(request.getParameter("title"));
+                    error = TitleInput.error(title, "タスク名");
+                    if (error == null) changed = new EditTaskLogic().execute(taskId, goalId, title);
+                } else if ("complete".equals(action)) {
+                    changed = new UpdateTaskLogic().execute(taskId, goalId);
+                } else {
+                    changed = new DeleteTaskLogic().execute(taskId, goalId);
+                }
+                if (error == null && !changed) error = "対象タスクを変更できませんでした";
+            } catch (NumberFormatException e) {
+                error = "タスクIDが不正です";
+            }
+        } else {
+            error = "操作が不正です";
+        }
+        if (error != null) request.setAttribute("errorMsg", error);
 		// 処理後にタスク一覧を再取得
 		GetTaskListLogic getTaskListLogic = new GetTaskListLogic();
 		
